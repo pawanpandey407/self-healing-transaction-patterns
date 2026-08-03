@@ -39,7 +39,7 @@ The pattern catalog (`docs/patterns/`) will map each family below to a concrete 
 - **Conventional response:** Usually detected late, from customer complaints or merchant escalation; on-call manually drains the instance.
 - **Self-healing target:** Outlier detection at per-instance granularity, automatic drain and replacement of the outlier, verification that fleet percentiles recover.
 
-**Field notes:** two gray-failure shapes I have seen repeatedly on production container platforms. First, sibling pods running under the same image name but resolving it from different registry locations, so nominally identical replicas are actually running different builds; every health check passes while behavior quietly diverges. Second, traffic distribution failure: one pod receiving effectively all the traffic while its sibling sits idle, traced to a malfunctioning node underneath the quiet pod. Fleet-average dashboards miss both. The only thing that exposes them is comparing each instance against its siblings.
+**Field notes:** two gray-failure shapes I have seen on production container platforms. First, sibling pods running under the same image name but resolving it from different registry locations, so nominally identical replicas are actually running different builds; every health check passes while behavior quietly diverges. Second, a traffic distribution failure I worked through directly: I was getting a stream of alerts in my email for one cluster, and when I started diagnosing and checked traffic on our custom metrics dashboard, I saw far more requests flowing through one cluster alone while its siblings sat nearly idle. As a developer I did not have cluster access, so I involved SRE. The root cause was not a sick node at all: one of the message broker hosts was configured with the wrong cluster load balancer IP. Updating that host's IP and restarting the broker and its coordination service fixed the imbalance, and SRE deleted the wrong load balancer entry from the infrastructure provisioning catalog so the same misconfiguration could not be provisioned again. Fleet-average dashboards miss both shapes. The only thing that exposes them is comparing each instance against its siblings, and the fix is complete only when the template that produced the bad instance is corrected too.
 
 ### 1.3 Traffic-layer and platform-migration failures
 
@@ -50,6 +50,8 @@ The pattern catalog (`docs/patterns/`) will map each family below to a concrete 
 - **Self-healing target:** End-to-end synthetic transactions that exercise the full path continuously, so "app healthy but path dead" is detected as fast as an app crash; migration-aware connectivity verification that runs before traffic cutover, not after; alert routing with latency guarantees for transaction-stopping conditions.
 
 **Field note:** the gap between "every component reports healthy" and "transactions are actually flowing" is where the worst outages I have seen live.
+
+**Field note:** one more connectivity failure from that platform migration stuck with me. An application that sends reports to an enterprise print service went down, not because anything in the app broke, but because the team managing the print service had to whitelist the new cluster node IPs. Until that ticket cleared, the app was healthy and the function was dead. Migration connectivity is as much an organizational dependency as a technical one: some of the connectivity assumptions that do not carry over live in other teams' allowlists.
 
 ---
 
