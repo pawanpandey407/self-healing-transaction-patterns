@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: transaction-pipeline
+
+pipeline:
+  generator:
+    interval-ms: 500
+    clients: 5
+  stages:
+    validation:
+      failure-probability: 0.005
+      min-latency-ms: 5
+      max-latency-ms: 20
+    authorization:
+      # 2% decline rate is the healthy baseline, not an anomaly.
+      failure-probability: 0.02
+      min-latency-ms: 40
+      max-latency-ms: 120
+    settlement:
+      failure-probability: 0.005
+      min-latency-ms: 20
+      max-latency-ms: 80
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
