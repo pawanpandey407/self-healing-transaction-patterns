@@ -14,6 +14,10 @@ pipeline:
     authorization:
       # 2% decline rate is the healthy baseline, not an anomaly.
       failure-probability: 0.02
+      # Per-client override for injection scenarios. Break one client's
+      # path while the fleet stays at baseline, for example:
+      # client-failure-probability:
+      #   client-3: 0.5
       min-latency-ms: 40
       max-latency-ms: 120
     settlement:

@@ -66,12 +66,32 @@ public class PipelineProperties {
         /** Probability in [0, 1] that this stage fails a transaction. */
         private double failureProbability = 0.0;
 
+        /**
+         * Per-client overrides of the failure probability, keyed by client id.
+         * Lets an injection scenario break one client's path while the rest of
+         * the fleet stays at baseline, which is exactly the signature the
+         * detection module's per-client divergence primitive looks for.
+         */
+        private Map<String, Double> clientFailureProbability = new HashMap<>();
+
         /** Simulated processing latency range in milliseconds. */
         private long minLatencyMs = 0;
         private long maxLatencyMs = 0;
 
         public double getFailureProbability() {
             return failureProbability;
+        }
+
+        public Map<String, Double> getClientFailureProbability() {
+            return clientFailureProbability;
+        }
+
+        public void setClientFailureProbability(Map<String, Double> clientFailureProbability) {
+            this.clientFailureProbability = clientFailureProbability;
+        }
+
+        public double failureProbabilityFor(String clientId) {
+            return clientFailureProbability.getOrDefault(clientId, failureProbability);
         }
 
         public void setFailureProbability(double failureProbability) {

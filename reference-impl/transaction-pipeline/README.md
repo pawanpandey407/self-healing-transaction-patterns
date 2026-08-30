@@ -63,3 +63,10 @@ All knobs live in `src/main/resources/application.yml` under the
 `failure-probability`, `min-latency-ms`, and `max-latency-ms`. Raise a
 stage's failure probability to simulate an incident and watch `/stats`
 drift from the baseline.
+
+Each stage also accepts `client-failure-probability`, a map of client id
+to failure probability that overrides the stage default for those
+clients only. This is the injection hook for per-client divergence
+scenarios: one client's path breaks while the fleet stays at baseline,
+which is the signature the detection module's per-client primitive is
+specified against.

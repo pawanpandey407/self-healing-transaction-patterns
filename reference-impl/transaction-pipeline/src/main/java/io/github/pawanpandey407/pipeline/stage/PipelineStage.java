@@ -31,7 +31,8 @@ public abstract class PipelineStage {
     public boolean process(Transaction transaction) {
         PipelineProperties.Stage settings = properties.stage(name());
         simulateLatency(settings);
-        if (ThreadLocalRandom.current().nextDouble() < settings.getFailureProbability()) {
+        double failureProbability = settings.failureProbabilityFor(transaction.getClientId());
+        if (ThreadLocalRandom.current().nextDouble() < failureProbability) {
             return false;
         }
         return apply(transaction);
