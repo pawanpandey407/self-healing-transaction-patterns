@@ -1,10 +1,20 @@
 spring:
   application:
     name: transaction-pipeline
+  task:
+    scheduling:
+      # The generator and the detection engine are both scheduled tasks.
+      # On the default single-thread scheduler a generator that falls
+      # behind starves detection completely: monitoring silenced by the
+      # workload it watches. Detection gets its own thread.
+      pool:
+        size: 4
 
 pipeline:
   generator:
-    interval-ms: 500
+    # 250ms gives each of the five clients about a dozen transactions per
+    # 15 second detection window, enough for per-client ratios to mean something.
+    interval-ms: 250
     clients: 5
   stages:
     validation:
@@ -24,6 +34,18 @@ pipeline:
       failure-probability: 0.005
       min-latency-ms: 20
       max-latency-ms: 80
+
+detection:
+  # Two minutes of warmup at these defaults before any verdict can fire.
+  window-ms: 15000
+  warmup-windows: 8
+  sigma: 3.0
+  min-window-samples: 10
+  ratio-floor: 0.05
+  relative-floor: 0.3
+  saturation-threshold: 0.9
+  projection-horizon-seconds: 600
+  cooldown-seconds: 60
 
 management:
   endpoints:

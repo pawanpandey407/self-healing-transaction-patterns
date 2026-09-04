@@ -26,7 +26,10 @@ public class TransactionPipeline {
 
     public Transaction process(Transaction transaction) {
         for (PipelineStage stage : stages) {
-            if (!stage.process(transaction)) {
+            long start = System.nanoTime();
+            boolean passed = stage.process(transaction);
+            metrics.recordStageLatency(stage.name(), (System.nanoTime() - start) / 1_000_000);
+            if (!passed) {
                 transaction.setStatus(Transaction.Status.FAILED);
                 transaction.setFailedStage(stage.name());
                 metrics.recordFailure(transaction, stage.name());

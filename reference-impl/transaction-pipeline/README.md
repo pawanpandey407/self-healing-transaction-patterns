@@ -56,6 +56,58 @@ Example response shape:
 }
 ```
 
+## Detection module
+
+The pipeline runs the detection module from `docs/detection-module.md`
+in-process. Once per window it samples the counters, computes the
+window delta, and hands it to five primitives in order: per-client
+outcome divergence (D1), stage failure shape shift (D2), latency
+percentile divergence (D3), arrival anomaly (D4), and saturation
+trending (D5). Every trigger is relative to a learned baseline; there
+are no static thresholds.
+
+```
+curl localhost:8080/verdicts          # verdicts, newest first
+curl localhost:8080/verdicts/status   # windows observed, verdicts recorded
+```
+
+Three lessons from building it are visible in the code and worth
+knowing before you tune anything:
+
+- Baselines learn nothing from windows that trigger. Fold an incident
+  into its own baseline and the detector decides broken is normal
+  within minutes.
+- Ratio thresholds widen with sampling noise (`Thresholds.java`). With
+  six transactions in a window, one failure moves the ratio by 0.17,
+  which is not evidence of anything.
+- Detection runs on its own scheduler thread. On the default single
+  thread, a generator that falls behind starves the engine completely:
+  monitoring silenced by the workload it watches.
+
+## Runtime failure injection
+
+Injection scenarios need to break things after baselines have learned
+healthy behavior, which startup configuration cannot do, so the live
+stage settings can be changed over HTTP:
+
+```
+# one client's authorization failures to 50%, the fleet stays at baseline
+curl -X POST "localhost:8080/inject/stage/authorization/client/client-3?probability=0.5"
+curl -X DELETE "localhost:8080/inject/stage/authorization/client/client-3"
+
+# stage-wide failure probability, and stage latency range
+curl -X POST "localhost:8080/inject/stage/settlement?probability=0.2"
+curl -X POST "localhost:8080/inject/stage/settlement/latency?minMs=300&maxMs=500"
+
+curl localhost:8080/inject            # current settings
+```
+
+A full demonstration: start the app, wait for warmup (two minutes at
+defaults, check `windowsObserved` against `warmup-windows`), confirm
+`/verdicts` is empty, inject client-3, and watch a D1 verdict name the
+client and the failing stage while every other client stays quiet.
+Then inject settlement latency and watch D3 localize it to settlement.
+
 ## Tuning
 
 All knobs live in `src/main/resources/application.yml` under the
