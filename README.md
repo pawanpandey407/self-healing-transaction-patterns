@@ -35,7 +35,7 @@ This is an active work in progress.
 - [x] Failure-mode taxonomy for card transaction pipelines (v0, see `docs/failure-mode-taxonomy.md`)
 - [ ] Pattern catalog: one document per failure mode family
 - [x] Reference pipeline skeleton (Spring Boot, see `reference-impl/transaction-pipeline/`)
-- [ ] Detection module: latency and error-rate anomaly signals
+- [x] Detection module: latency and error-rate anomaly signals (spec in `docs/detection-module.md`, running in the reference pipeline)
 - [ ] Recovery module: automated re-route and failover demonstration
 - [ ] Failure injection scenarios reproducing each taxonomy entry
 

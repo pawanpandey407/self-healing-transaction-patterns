@@ -2,7 +2,7 @@
 
 **Derived from:** the production metric baseline table in `failure-mode-taxonomy.md`
 **Runs against:** the reference pipeline in `reference-impl/transaction-pipeline/`
-**Status:** v0, specification only; implementation follows in the reference pipeline
+**Status:** v0, implemented in the reference pipeline (D1 through D5; D6 awaits a broker-backed stage)
 
 ## Purpose and scope
 
