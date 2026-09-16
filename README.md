@@ -19,13 +19,12 @@ This project documents and implements architecture patterns that let transaction
 ```
 docs/
   failure-mode-taxonomy.md    Taxonomy of failure modes in card transaction pipelines
+  detection-module.md         Detection primitives, learned baselines, and verdicts
+  recovery-module.md          Recovery actions and autonomy tiers (specification)
   patterns/                   One doc per self-healing pattern (detection signal -> decision -> recovery action)
-  adr/                        Architecture decision records
 reference-impl/
-  transaction-pipeline/       Minimal transaction pipeline (Java / Spring Boot) used as the test subject
-  detection/                  Anomaly detection over pipeline telemetry
-  recovery/                   Automated recovery actions (re-route, failover, rollback)
-  chaos/                      Failure injection used to demonstrate each pattern end to end
+  transaction-pipeline/       Transaction pipeline (Java / Spring Boot): synthetic generator, three
+                              stages, per-client failure injection, and the detection module
 ```
 
 ## Status and roadmap
