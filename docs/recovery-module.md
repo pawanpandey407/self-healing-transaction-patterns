@@ -16,13 +16,13 @@ Before specifying what a machine should do, it is worth recording what people di
 
 **Field note:** recovery in my production experience was a mix of everything, but most incidents were infrastructure issues rather than code, so the two actions I performed far more than any other were restarting pods and then rerunning whatever had stopped. We did this tremendously often. Rollback existed as a pipeline that SRE had set up, and developers could run it ourselves because both the regular change requests and the rollback change requests were already approved by the senior roles ahead of time. The approval happened before the incident, not during it.
 
-**Field note:** we had no backup clusters. If the pods went down in one or two clusters, processing of client data simply stopped until it was fixed, and once it was fixed we had to rerun what had stopped or was still pending. Recovery for us was never failover. It was repair, then replay.
+**Field note:** failover existed for us only inside a cluster. Instances could fail over to their siblings, and that handled single-instance problems. What we had no standby for was the cluster itself: if the pods went down across one or two clusters, processing of client data simply stopped until it was fixed, and once it was fixed we had to rerun what had stopped or was still pending. At that level recovery was never failover. It was repair, then replay.
 
 Three lessons from those years shape every rule below.
 
 1. **Pre-approved action classes are what make speed safe.** The rollback pipeline was fast precisely because the approval was already on file. Autonomous recovery is the same idea taken to its end: approve the class of action in advance, under stated conditions, and let the machine execute instances of it.
 2. **The common actions are the dangerous ones.** Restart and rerun were routine and both bit us. See the safety rules.
-3. **Without failover, replay is the recovery path.** A system with no standby recovers by fixing the fault and reprocessing the backlog, which means replay safety (pattern 3.2) is a prerequisite for recovery, not an afterthought.
+3. **Where there is no standby, replay is the recovery path.** Instance-level failover handles instance-level faults and nothing above them. A system with no standby at the level that actually failed recovers by fixing the fault and reprocessing the backlog, which means replay safety (pattern 3.2) is a prerequisite for recovery, not an afterthought.
 
 ## Design principles
 
@@ -87,7 +87,7 @@ Each action names the verdicts that can trigger it, its tier, its safety precond
 
 ## Failover
 
-The taxonomy's self-healing targets mention failover to a standby. This spec treats failover as an action only where a rehearsed standby actually exists, and says so explicitly, because in my experience it usually did not. Where no standby exists, the honest recovery path is R1 through R5: repair, then replay, with the backlog protected in the meantime. A failover that has never been rehearsed is not a recovery action; it is a hypothesis, and incidents are the wrong time to test hypotheses.
+The taxonomy's self-healing targets mention failover to a standby. Failover is real at the instance level, where the orchestrator moves work to a healthy sibling, and that covers single-instance faults. Above that line it is a different matter: in my experience there was no standby for the cluster itself, so the failures that stopped client processing had no failover path at all. This spec therefore treats failover as an action only where a rehearsed standby actually exists at the level that failed. Where none exists, the honest recovery path is R1 through R5: repair, then replay, with the backlog protected in the meantime. A failover that has never been rehearsed is not a recovery action; it is a hypothesis, and incidents are the wrong time to test hypotheses.
 
 ## Execution record
 
