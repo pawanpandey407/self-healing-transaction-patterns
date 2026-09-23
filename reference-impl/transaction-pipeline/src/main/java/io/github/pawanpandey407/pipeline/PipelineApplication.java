@@ -2,6 +2,7 @@ package io.github.pawanpandey407.pipeline;
 
 import io.github.pawanpandey407.pipeline.config.DetectionProperties;
 import io.github.pawanpandey407.pipeline.config.PipelineProperties;
+import io.github.pawanpandey407.pipeline.config.RecoveryProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -9,7 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
-@EnableConfigurationProperties({PipelineProperties.class, DetectionProperties.class})
+@EnableConfigurationProperties({PipelineProperties.class, DetectionProperties.class, RecoveryProperties.class})
 public class PipelineApplication {
 
     public static void main(String[] args) {

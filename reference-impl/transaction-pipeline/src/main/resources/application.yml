@@ -56,6 +56,20 @@ detection:
   prior-weight: 50
   min-rate: 0.005
 
+recovery:
+  enabled: true
+  # Probe rounds try held transactions for real. A client is released
+  # only when the last 20 probes show at most one failure: a client still
+  # failing half its traffic almost never produces a window that clean.
+  probe-interval-ms: 3000
+  probes-per-round: 4
+  probe-window: 20
+  probe-max-failures: 1
+  quarantine-capacity: 5000
+  # More than two clients diverging together is not a single-client
+  # fault. Isolating them would turn an incident into an outage.
+  max-isolated-clients: 2
+
 management:
   endpoints:
     web:

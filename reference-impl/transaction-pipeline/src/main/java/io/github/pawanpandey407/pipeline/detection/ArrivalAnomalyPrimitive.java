@@ -17,6 +17,10 @@ import java.util.Map;
  * the Family 1.3 signature, the application healthy while the path is
  * dead. Retry-vs-unique divergence from the spec waits until the
  * pipeline can generate retry traffic.
+ *
+ * It counts arrivals, not processing. A held arrival still arrived, and
+ * a replay burst after a release is old traffic, not new; counting
+ * processing instead made every release replay read as a surge.
  */
 @Component
 @Order(4)
@@ -41,7 +45,7 @@ public class ArrivalAnomalyPrimitive implements DetectionPrimitive {
     public List<Verdict> observe(WindowSnapshot w) {
         List<Verdict> out = new ArrayList<>();
         BaselineStore.RollingBaseline b = baselines.get(name(), "pipeline", w.hourBucket());
-        double arrivals = w.processed();
+        double arrivals = w.arrived();
 
         if (b.samples() >= props.getWarmupWindows()) {
             if (arrivals == 0 && b.mean() >= props.getMinWindowSamples()) {
@@ -52,7 +56,7 @@ public class ArrivalAnomalyPrimitive implements DetectionPrimitive {
                     && arrivals > b.mean() * (1 + props.getRelativeFloor())) {
                 out.add(new Verdict(Instant.now(), name(), "pipeline", arrivals, b.mean(), b.stddev(),
                         "arrival rate surged beyond its baseline band",
-                        Map.of("windowArrivals", w.processed())));
+                        Map.of("windowArrivals", w.arrived())));
             }
         }
         // Empty windows (startup, or the path already dead) and triggered

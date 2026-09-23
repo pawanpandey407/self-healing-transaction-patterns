@@ -2,7 +2,7 @@
 
 **Consumes:** verdicts from the detection module (`docs/detection-module.md`)
 **Runs against:** the reference pipeline in `reference-impl/transaction-pipeline/`
-**Status:** v0, specification only; implementation follows in the reference pipeline
+**Status:** v0; R2 client isolation and R5 safe replay are implemented in the reference pipeline, R1, R3 and R4 are specification only
 
 ## Purpose and scope
 
@@ -93,11 +93,33 @@ The taxonomy's self-healing targets mention failover to a standby. Failover is r
 
 Every action produces an execution record joined to its triggering verdict: the action, its tier, the preconditions checked and their results, the time to outcome-verified recovery, and the outcome check evidence. Records go to the same channel as verdicts. An incident postmortem should be assemblable from the verdict and record stream alone.
 
+## Implementation in the reference pipeline
+
+R2 and R5 run in `reference-impl/transaction-pipeline/`, in the `recovery` package.
+
+- **Holding, not failing.** An isolated client's new transactions are held in arrival order behind an admission gate. They fail fast only when the hold reaches its capacity, 5000 by default, and each rejection is counted.
+- **Probing with real work.** Each probe round tries up to four held transactions from the head. A failed probe goes back to the head, so nothing behind it can complete first. For card lifecycle traffic that matters: an activation must not overtake the issuance it depends on.
+- **Release by a window, not a lucky run.** The client is released when the last 20 probes show at most one failure. A client still failing half its traffic almost never produces a window that clean.
+- **Replay that keeps the order.** On release the backlog replays from the head while new arrivals still join the tail, and the client is released only when the queue is empty, checked under the same lock arrivals take. The first version let arrivals through as soon as the replay began, and a test with concurrent arrivals caught one finishing more than a thousand places ahead of its turn.
+- **Replay safety (R5).** Each episode keeps a ledger of transaction ids completed while held. Replay skips anything already in it, and a duplicate counter proves the rule held: in a correct run it stays at zero.
+- **A cap on isolation.** At most two clients are isolated at once. A third divergence is declined and recorded as needing a person, because several clients diverging together is not a single-client fault.
+- **Execution record.** `/recovery` shows every decision joined to its verdict, and every episode with an accounting that balances at any moment: quarantined equals held, plus in flight, plus probes succeeded, plus replayed, plus skipped.
+- **Recovery work is not traffic.** Probe and replay attempts are tagged with their origin. Detection reads live processing only and counts arrivals before any gate holds them. Counting recovery work as traffic made every release replay read as a D4 arrival surge, and let a quarantined client's failing probes raise D2's baseline and count against the rest of the fleet.
+
+### Known limits
+
+- The release waits for the backlog to drain. If arrivals outpace the single replay thread, the client stays in replay longer; arrivals still complete in order, and the hold capacity bounds the queue.
+- One probe thread serves every episode, so while one client's backlog replays, other isolated clients wait for their next probe round.
+- Probe rounds try a fixed number of transactions per interval. At the demo rates that is fewer than one client's arrivals, so even a healthy isolated client's backlog grows until release, and the release replay is correspondingly large.
+- A fleet-wide fault that starts while a client is isolated keeps that client isolated, since its probes fail at the fleet rate. The isolation outlives its original cause until the fleet recovers.
+- Isolation shrinks every detection window by the isolated client's share. At millisecond stage latencies that can let a single timer outlier set a stage's p99 and fire D3, which happened once in a demo run. D3 verdicts do not trigger recovery; the fix belongs in D3's calibration.
+- The synthetic generator submits synchronously. When its interval is shorter than the processing time, holding a client's transactions makes submits cheaper and the generator speeds up, which reads as an arrival surge. Keep the interval above the processing time.
+
 ## Validation against the reference pipeline
 
-The reference pipeline has a detection module and an injection API today; recovery actions are the implementation work this spec precedes. Planned scenarios:
+The reference pipeline has a detection module, an injection API, and R2 with R5 on its backlog. Scenario 1 is implemented; the rest remain planned.
 
-1. **R2 on D1.** Inject a per-client failure, expect the D1 verdict, expect the client isolated and the fleet outcome rate unchanged through the injection. Clear the injection, expect the client's backlog replayed with zero duplicates.
+1. **R2 on D1.** Inject a per-client failure, expect the D1 verdict, expect the client isolated and the fleet outcome rate unchanged through the injection. Clear the injection, expect the client's backlog replayed with zero duplicates. **Implemented.** In one run at the demo settings in the pipeline README, client-3 was isolated 10 seconds after a 50% authorization failure was injected and released 8 seconds after the heal. Its 153 held transactions ended as 51 successful probes and 102 replays, with zero duplicates, the rest of the fleet failed at 3.6% during the isolation against its normal 2 to 3% decline rate, and the only verdict of the run was the D1 verdict that started it.
 2. **R3 on D4.** Add a naive retrying caller, expect the retry budget to trip and first-attempt success to hold at baseline.
 3. **R1 on D3.** Inject latency into a stage, expect the drain-aware restart of that stage's worker and latency back in band within one window. This needs the pipeline to gain restartable stage workers, the same extension a broker-backed stage will need.
 4. **R5 after a stop.** Stop the generator mid-batch, restart it, expect reconciliation to skip completed correlation ids and the duplicate count to be exactly zero.

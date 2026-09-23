@@ -7,9 +7,16 @@ import java.util.Map;
  * One evaluation window's worth of activity: deltas of the pipeline
  * counters since the previous window, plus drained stage latencies and
  * current resource readings.
+ *
+ * arrived counts new transactions that reached the pipeline, including
+ * any a gate held. processed, failed and the per-client and per-stage
+ * maps count live processing only; recovery probes and replays are left
+ * out, because they are the recovery module's work, not traffic. Stage
+ * latencies include every attempt, since recovery work is real load.
  */
 public record WindowSnapshot(
         int hourBucket,
+        long arrived,
         long processed,
         long failed,
         Map<String, Long> successByClient,

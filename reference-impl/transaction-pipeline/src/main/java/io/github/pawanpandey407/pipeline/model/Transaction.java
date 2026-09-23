@@ -9,6 +9,8 @@ public class Transaction {
 
     public enum Status {
         NEW,
+        /** Held by the recovery module while this client's path is broken. */
+        QUARANTINED,
         COMPLETED,
         FAILED
     }
@@ -60,5 +62,15 @@ public class Transaction {
 
     public void setFailedStage(String failedStage) {
         this.failedStage = failedStage;
+    }
+
+    /**
+     * Clears the outcome of any earlier attempt. A held transaction can be
+     * tried as a probe, fail, go back into quarantine, and be replayed
+     * later; each attempt must start from a clean status.
+     */
+    public void beginAttempt() {
+        this.status = Status.NEW;
+        this.failedStage = null;
     }
 }

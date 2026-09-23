@@ -20,11 +20,12 @@ This project documents and implements architecture patterns that let transaction
 docs/
   failure-mode-taxonomy.md    Taxonomy of failure modes in card transaction pipelines
   detection-module.md         Detection primitives, learned baselines, and verdicts
-  recovery-module.md          Recovery actions and autonomy tiers (specification)
+  recovery-module.md          Recovery actions and autonomy tiers (R2 and R5 implemented)
   patterns/                   One doc per self-healing pattern (detection signal -> decision -> recovery action)
 reference-impl/
   transaction-pipeline/       Transaction pipeline (Java / Spring Boot): synthetic generator, three
-                              stages, per-client failure injection, and the detection module
+                              stages, per-client failure injection, the detection module, and
+                              client isolation with safe replay
 ```
 
 ## Status and roadmap
@@ -35,7 +36,7 @@ This is an active work in progress.
 - [ ] Pattern catalog: one document per failure mode family
 - [x] Reference pipeline skeleton (Spring Boot, see `reference-impl/transaction-pipeline/`)
 - [x] Detection module: latency and error-rate anomaly signals (spec in `docs/detection-module.md`, running in the reference pipeline)
-- [ ] Recovery module: automated re-route and failover demonstration
+- [ ] Recovery module: automated re-route and failover demonstration (partly implemented: R2 client isolation and R5 safe replay run in the reference pipeline, see `docs/recovery-module.md`)
 - [ ] Failure injection scenarios reproducing each taxonomy entry
 
 ## Scope and non-goals

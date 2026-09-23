@@ -149,7 +149,7 @@ class ClientDivergencePrimitiveTest {
             processed += PER_CLIENT;
             failed += f;
         }
-        return new WindowSnapshot(HOUR, processed, failed, success, failure,
+        return new WindowSnapshot(HOUR, processed, processed, failed, success, failure,
                 Map.of("authorization", failed), byClientStage, Map.of(), -1, 0.1);
     }
 }

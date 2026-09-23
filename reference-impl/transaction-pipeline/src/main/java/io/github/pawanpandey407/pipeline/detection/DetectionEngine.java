@@ -13,7 +13,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Samples the pipeline's counters once per window, computes the window
- * delta, and hands it to every registered primitive in order. The
+ * delta, and hands it to every registered primitive in order. Outcomes
+ * come from the live counters, so recovery probes and replays never look
+ * like traffic. The
  * engine knows nothing about what the primitives look for; adding a
  * primitive is adding a component, the same way pipeline stages work.
  */
@@ -27,6 +29,7 @@ public class DetectionEngine {
     private Map<String, Long> lastFailureByClient = new HashMap<>();
     private Map<String, Long> lastFailuresByStage = new HashMap<>();
     private Map<String, Map<String, Long>> lastFailuresByClientStage = new HashMap<>();
+    private long lastArrived;
     private long lastProcessed;
     private long lastFailed;
     private final AtomicLong windowsObserved = new AtomicLong();
@@ -44,15 +47,18 @@ public class DetectionEngine {
     @Scheduled(fixedDelayString = "${detection.window-ms:10000}")
     public synchronized void tick() {
         windowsObserved.incrementAndGet();
-        Map<String, Long> successByClient = metrics.successByClientCounts();
-        Map<String, Long> failureByClient = metrics.failureByClientCounts();
-        Map<String, Long> failuresByStage = metrics.failuresByStageCounts();
-        Map<String, Map<String, Long>> failuresByClientStage = metrics.failuresByClientStageCounts();
-        long processed = metrics.totalProcessedCount();
-        long failed = metrics.totalFailedCount();
+        PipelineMetrics.Counts live = metrics.live();
+        Map<String, Long> successByClient = live.successByClient();
+        Map<String, Long> failureByClient = live.failureByClient();
+        Map<String, Long> failuresByStage = live.failuresByStage();
+        Map<String, Map<String, Long>> failuresByClientStage = live.failuresByClientStage();
+        long arrived = metrics.totalArrivedCount();
+        long processed = live.processedCount();
+        long failed = live.failedCount();
 
         WindowSnapshot window = new WindowSnapshot(
                 LocalTime.now().getHour(),
+                arrived - lastArrived,
                 processed - lastProcessed,
                 failed - lastFailed,
                 delta(successByClient, lastSuccessByClient),
@@ -71,6 +77,7 @@ public class DetectionEngine {
         lastFailureByClient = failureByClient;
         lastFailuresByStage = failuresByStage;
         lastFailuresByClientStage = failuresByClientStage;
+        lastArrived = arrived;
         lastProcessed = processed;
         lastFailed = failed;
     }

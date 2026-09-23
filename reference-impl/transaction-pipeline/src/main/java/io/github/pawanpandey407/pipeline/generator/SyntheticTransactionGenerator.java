@@ -34,6 +34,6 @@ public class SyntheticTransactionGenerator {
         String clientId = "client-" + (random.nextInt(properties.getGenerator().getClients()) + 1);
         BigDecimal amount = BigDecimal.valueOf(random.nextDouble(1.00, 500.00))
                 .setScale(2, RoundingMode.HALF_UP);
-        pipeline.process(new Transaction(clientId, amount));
+        pipeline.submit(new Transaction(clientId, amount));
     }
 }
