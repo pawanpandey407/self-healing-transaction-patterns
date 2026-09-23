@@ -18,10 +18,55 @@ import java.util.concurrent.ConcurrentMap;
 public class BaselineStore {
 
     private final ConcurrentMap<String, RollingBaseline> baselines = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, RateBaseline> rates = new ConcurrentHashMap<>();
 
     public RollingBaseline get(String primitive, String subject, int hourBucket) {
         String key = primitive + ":" + subject + ":h" + hourBucket;
         return baselines.computeIfAbsent(key, k -> new RollingBaseline());
+    }
+
+    public RateBaseline rate(String primitive, String subject, int hourBucket) {
+        String key = primitive + ":" + subject + ":h" + hourBucket;
+        return rates.computeIfAbsent(key, k -> new RateBaseline());
+    }
+
+    /**
+     * A failure rate learned from pooled counts rather than averaged ratios.
+     *
+     * Averaging per-window ratios lets a single six-transaction window
+     * weigh as much as a sixty-transaction one. Pooled counts weigh every
+     * transaction equally. Counts are halved once they pass a cap, so the
+     * rate keeps adapting to slow, legitimate change.
+     */
+    public static class RateBaseline {
+
+        private static final long CAP = 5000;
+
+        private double failures;
+        private double transactions;
+        private long windows;
+
+        public synchronized void add(long windowFailures, long windowTransactions) {
+            failures += windowFailures;
+            transactions += windowTransactions;
+            windows++;
+            if (transactions > CAP) {
+                failures /= 2;
+                transactions /= 2;
+            }
+        }
+
+        public synchronized double failures() {
+            return failures;
+        }
+
+        public synchronized double transactions() {
+            return transactions;
+        }
+
+        public synchronized long windows() {
+            return windows;
+        }
     }
 
     /** Running mean and variance, Welford's algorithm. */

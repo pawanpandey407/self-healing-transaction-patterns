@@ -71,7 +71,7 @@ curl localhost:8080/verdicts          # verdicts, newest first
 curl localhost:8080/verdicts/status   # windows observed, verdicts recorded
 ```
 
-Three lessons from building it are visible in the code and worth
+Four lessons from building it are visible in the code and worth
 knowing before you tune anything:
 
 - Baselines learn nothing from windows that trigger. Fold an incident
@@ -83,6 +83,16 @@ knowing before you tune anything:
 - Detection runs on its own scheduler thread. On the default single
   thread, a generator that falls behind starves the engine completely:
   monitoring silenced by the workload it watches.
+- A per-client ratio over a small window is mostly noise. The first
+  version of D1 compared each client's window ratio against its own
+  rolling baseline, and in its first live run it isolated three healthy
+  clients and never flagged the broken one: one failure in a small
+  window looked like divergence, and baselines learned from windows they
+  should have rejected. D1 now pools each client's counts, shrinks that
+  rate toward the fleet rate until the client has history, judges each
+  window with an exact binomial test, learns only windows that look
+  ordinary, and names a client only after two consecutive divergent
+  windows.
 
 ## Runtime failure injection
 

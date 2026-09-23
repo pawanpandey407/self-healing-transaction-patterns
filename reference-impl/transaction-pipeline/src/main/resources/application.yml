@@ -46,6 +46,15 @@ detection:
   saturation-threshold: 0.9
   projection-horizon-seconds: 600
   cooldown-seconds: 60
+  # D1 judges each client window with an exact binomial test against the
+  # client's normal rate, learns only ordinary windows, and names a client
+  # only after consecutive divergent windows. Recovery acts on D1, so a
+  # false positive quarantines a healthy client.
+  divergence-alpha: 0.001
+  learn-alpha: 0.01
+  confirm-windows: 2
+  prior-weight: 50
+  min-rate: 0.005
 
 management:
   endpoints:

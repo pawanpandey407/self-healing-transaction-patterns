@@ -3,6 +3,7 @@ package io.github.pawanpandey407.pipeline.detection;
 import io.github.pawanpandey407.pipeline.config.DetectionProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -26,11 +27,13 @@ public class VerdictStore {
     private static final int CAPACITY = 200;
 
     private final DetectionProperties props;
+    private final ApplicationEventPublisher events;
     private final ConcurrentLinkedDeque<Verdict> verdicts = new ConcurrentLinkedDeque<>();
     private final ConcurrentMap<String, Long> lastEmittedMs = new ConcurrentHashMap<>();
 
-    public VerdictStore(DetectionProperties props) {
+    public VerdictStore(DetectionProperties props, ApplicationEventPublisher events) {
         this.props = props;
+        this.events = events;
     }
 
     /** Returns true if the verdict was recorded, false if cooled down. */
@@ -51,6 +54,7 @@ public class VerdictStore {
         while (verdicts.size() > CAPACITY) {
             verdicts.pollLast();
         }
+        events.publishEvent(new VerdictRecorded(verdict));
         return true;
     }
 

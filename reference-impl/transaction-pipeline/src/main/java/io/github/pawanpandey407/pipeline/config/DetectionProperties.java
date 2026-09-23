@@ -39,6 +39,35 @@ public class DetectionProperties {
     /** Minimum seconds between repeated verdicts for the same subject. */
     private long cooldownSeconds = 60;
 
+    /**
+     * D1: a client window is divergent when failures at least this
+     * extreme would happen with probability below this value at the
+     * client's normal rate.
+     */
+    private double divergenceAlpha = 0.001;
+
+    /**
+     * D1: a client window is learned only when its failures are ordinary
+     * at the client's normal rate, meaning a tail probability of at least
+     * this value. Windows between the two alphas are neither flagged nor
+     * learned, so a borderline start to an incident cannot poison the
+     * baseline it will be judged against.
+     */
+    private double learnAlpha = 0.01;
+
+    /** D1: consecutive divergent windows required before a verdict. */
+    private int confirmWindows = 2;
+
+    /**
+     * D1: weight, in transactions, of the fleet's rate in a client's
+     * expected rate. A client with little history borrows the fleet's
+     * rate; a client with a long history is judged mostly on its own.
+     */
+    private double priorWeight = 50;
+
+    /** D1: floor on any expected failure rate, so a quiet stretch never implies zero. */
+    private double minRate = 0.005;
+
     public long getWindowMs() {
         return windowMs;
     }
@@ -109,5 +138,45 @@ public class DetectionProperties {
 
     public void setCooldownSeconds(long cooldownSeconds) {
         this.cooldownSeconds = cooldownSeconds;
+    }
+
+    public double getDivergenceAlpha() {
+        return divergenceAlpha;
+    }
+
+    public void setDivergenceAlpha(double divergenceAlpha) {
+        this.divergenceAlpha = divergenceAlpha;
+    }
+
+    public double getLearnAlpha() {
+        return learnAlpha;
+    }
+
+    public void setLearnAlpha(double learnAlpha) {
+        this.learnAlpha = learnAlpha;
+    }
+
+    public int getConfirmWindows() {
+        return confirmWindows;
+    }
+
+    public void setConfirmWindows(int confirmWindows) {
+        this.confirmWindows = confirmWindows;
+    }
+
+    public double getPriorWeight() {
+        return priorWeight;
+    }
+
+    public void setPriorWeight(double priorWeight) {
+        this.priorWeight = priorWeight;
+    }
+
+    public double getMinRate() {
+        return minRate;
+    }
+
+    public void setMinRate(double minRate) {
+        this.minRate = minRate;
     }
 }
