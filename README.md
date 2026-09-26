@@ -1,8 +1,39 @@
 # Self-Healing Transaction Patterns
 
+[![CI](https://github.com/pawanpandey407/self-healing-transaction-patterns/actions/workflows/ci.yml/badge.svg)](https://github.com/pawanpandey407/self-healing-transaction-patterns/actions/workflows/ci.yml)
+
 A standardization framework and reference implementation for self-healing financial transaction architectures.
 
 **Author:** Pawan Pandey
+
+## Quick start
+
+See detection and recovery work end to end in about three minutes. Requires Java 17+ and Maven.
+
+```
+cd reference-impl/transaction-pipeline
+mvn spring-boot:run -Dspring-boot.run.arguments="--pipeline.generator.interval-ms=50 \
+  --pipeline.stages.validation.min-latency-ms=1 --pipeline.stages.validation.max-latency-ms=3 \
+  --pipeline.stages.authorization.min-latency-ms=4 --pipeline.stages.authorization.max-latency-ms=12 \
+  --pipeline.stages.settlement.min-latency-ms=2 --pipeline.stages.settlement.max-latency-ms=6 \
+  --detection.window-ms=5000 --detection.warmup-windows=6 --recovery.probe-interval-ms=1000"
+```
+
+In a second terminal, wait about a minute for detection to learn a healthy baseline, then break one client's authorization path:
+
+```
+curl -X POST "localhost:8080/inject/stage/authorization/client/client-3?probability=0.5"
+curl localhost:8080/recovery
+```
+
+Within a couple of windows, detection names client-3 and recovery isolates it: its new transactions are held in order while the other four clients keep flowing. Now heal the path:
+
+```
+curl -X DELETE "localhost:8080/inject/stage/authorization/client/client-3"
+curl localhost:8080/recovery
+```
+
+Probes confirm the path is healthy, the held backlog replays in order, and the episode shows `RELEASED` with `duplicateCompletions` at zero. `curl localhost:8080/verdicts` shows what detection saw, and `curl localhost:8080/stats` shows live traffic, probes, and replays counted separately. The pipeline README explains each piece: `reference-impl/transaction-pipeline/README.md`.
 
 ## The problem
 

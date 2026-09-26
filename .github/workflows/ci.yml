@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reference-impl/transaction-pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      # The pipeline targets Java 17, so CI builds on 17 to catch anything newer.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: reference-impl/transaction-pipeline/pom.xml
+
+      - name: Run tests
+        run: mvn -B -ntp test
