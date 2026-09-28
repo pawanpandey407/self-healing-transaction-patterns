@@ -81,14 +81,20 @@ public class SaturationTrendPrimitive implements DetectionPrimitive {
         }
     }
 
-    private double slope(Deque<double[]> samples) {
+    static double slope(Deque<double[]> samples) {
+        // Measure time from the first sample, not from the epoch. Squared
+        // epoch seconds are around 3e18, where n * sumXX and sumX * sumX
+        // agree in nearly every digit a double holds, and their difference
+        // is mostly rounding error.
+        double origin = samples.peekFirst()[0];
         int n = samples.size();
         double sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
         for (double[] s : samples) {
-            sumX += s[0];
+            double x = s[0] - origin;
+            sumX += x;
             sumY += s[1];
-            sumXY += s[0] * s[1];
-            sumXX += s[0] * s[0];
+            sumXY += x * s[1];
+            sumXX += x * x;
         }
         double denominator = n * sumXX - sumX * sumX;
         return denominator == 0 ? 0 : (n * sumXY - sumX * sumY) / denominator;
