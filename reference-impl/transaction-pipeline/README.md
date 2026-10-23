@@ -121,7 +121,7 @@ curl -X DELETE "localhost:8080/inject/stage/authorization/client/client-3"
 
 # stage-wide failure probability, and stage latency range
 curl -X POST "localhost:8080/inject/stage/settlement?probability=0.2"
-curl -X POST "localhost:8080/inject/stage/settlement/latency?minMs=300&maxMs=500"
+curl -X POST "localhost:8080/inject/stage/settlement/latency?minMs=100&maxMs=130"
 
 curl localhost:8080/inject            # current settings
 ```
@@ -131,6 +131,15 @@ defaults, check `windowsObserved` against `warmup-windows`), confirm
 `/verdicts` is empty, inject client-3, and watch a D1 verdict name the
 client and the failing stage while every other client stays quiet.
 Then inject settlement latency and watch D3 localize it to settlement.
+
+Keep the injected latency modest at the default generator interval. At
+100 to 130 ms a transaction usually finishes inside the 250 ms
+interval, so arrivals hold steady and D3 is the only verdict, though a
+slow machine may still throttle a little. At 300 to 500 ms
+the generator itself slows down, arrivals fall by about half, and D4
+reports the drop as well; that is back-pressure from the synchronous
+generator, not a dead path, and the spec's validation step uses it on
+purpose.
 
 ## Recovery module
 
