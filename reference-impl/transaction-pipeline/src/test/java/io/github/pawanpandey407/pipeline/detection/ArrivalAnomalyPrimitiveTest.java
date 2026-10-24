@@ -91,11 +91,16 @@ class ArrivalAnomalyPrimitiveTest {
 
     @Test
     void aWindowTheRuleCannotJudgeBreaksTheStreak() {
-        assertThat(d4.observe(window(20, 20))).isEmpty();
-        // Hour 11 has no learned baseline yet, so this window is not judged.
-        assertThat(d4.observe(window(11, 20, 20))).isEmpty();
+        // New hours are normally seeded from the previous one; with
+        // seeding off, hour 11 has no baseline and its window is not judged.
+        ArrivalAnomalyPrimitive unseeded = new ArrivalAnomalyPrimitive(new BaselineStore(0), props, verdicts);
+        for (int i = 0; i < 4; i++) {
+            unseeded.observe(window(100, 100));
+        }
+        assertThat(unseeded.observe(window(20, 20))).isEmpty();
+        assertThat(unseeded.observe(window(11, 20, 20))).isEmpty();
 
-        assertThat(d4.observe(window(20, 20))).isEmpty();
+        assertThat(unseeded.observe(window(20, 20))).isEmpty();
     }
 
     @Test

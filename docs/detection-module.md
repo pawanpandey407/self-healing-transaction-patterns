@@ -94,6 +94,8 @@ Each primitive defines a signal, a baseline, a trigger policy, and verdict conte
 
 Every baseline above is bucketed by time of day. In production our load had a daily rhythm driven by scheduled jobs, and a threshold that fits the afternoon fits three in the morning badly in both directions: it misses real problems during quiet hours and alarms on healthy busy hours. The reference pipeline generates flat traffic today; the baseline model must still be bucketed from the start, so that scheduled-load simulation can be added without redesigning detection.
 
+Buckets live in memory and are created on first use, so for the first day of uptime every clock hour would start with no baseline: blind for a warmup, learning whatever is in progress at the rollover as its normal, and never warming at all while a path is dead. A new bucket is therefore seeded from the nearest earlier hour that reached warmup, with rolling baselines capped at the warmup weight so the new hour's own windows take over quickly, and pooled rate baselines copied whole. Known cost: with a real daily rhythm, a legitimate step between adjacent hours larger than the trigger band alarms until that hour learns its own normal, and since triggered windows are never learned it may never do so. This rule must be revisited before scheduled-load simulation is added.
+
 ## The verdict
 
 Every trigger emits one verdict object: primitive, window, the localizing dimension (stage, client, resource, or path), current vs baseline values, and the raw evidence counts. Verdicts are the module's only output. They go to the same event channel the deployment gate pattern uses, with paging-grade delivery for anything transaction-stopping; an email inbox is not a delivery mechanism for a verdict.
